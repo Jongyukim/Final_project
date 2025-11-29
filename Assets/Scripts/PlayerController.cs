@@ -6,9 +6,9 @@ public class PlayerController : MonoBehaviour
     [SerializeField] private float moveSpeed = 2.5f;
     [SerializeField] private float groundDrag = 10f;
     [SerializeField] private float airDrag = 2f;
-
     [Header("Ground Check")]
     [SerializeField] private LayerMask groundLayer;
+    [SerializeField] private Transform codeInputPanel; // UI 패널
 
     private Rigidbody rb;
     private bool isGrounded;
@@ -23,9 +23,18 @@ public class PlayerController : MonoBehaviour
 
     void Update()
     {
-        // 입력 받기
-        horizontalInput = Input.GetAxis("Horizontal"); // A, D
-        verticalInput = Input.GetAxis("Vertical");     // W, S
+        // UI가 활성화되면 입력 받지 않기
+        if (codeInputPanel != null && codeInputPanel.gameObject.activeSelf)
+        {
+            horizontalInput = 0;
+            verticalInput = 0;
+        }
+        else
+        {
+            // 입력 받기
+            horizontalInput = Input.GetAxis("Horizontal"); // A, D
+            verticalInput = Input.GetAxis("Vertical");     // W, S
+        }
 
         // 지면 체크
         isGrounded = Physics.Raycast(transform.position, Vector3.down, 0.2f, groundLayer);

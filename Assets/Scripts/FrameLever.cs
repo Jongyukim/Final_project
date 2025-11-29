@@ -4,7 +4,7 @@ using System.Collections;
 public class FrameLever : Interactable
 {
     [SerializeField] private AudioClip clickSound;
-    [SerializeField] private float rotationAngle = 90f;   // Z축 회전하도록 90 정도 추천
+    [SerializeField] private float rotationAngle = 90f;
     [SerializeField] private float rotationSpeed = 10f;
 
     private bool isActivated = false;
@@ -17,10 +17,7 @@ public class FrameLever : Interactable
         audioSource = GetComponent<AudioSource>();
         if (audioSource == null)
             audioSource = gameObject.AddComponent<AudioSource>();
-
         originalRotation = transform.rotation;
-
-        // 세로 → 가로 : Z축 회전
         targetRotation = originalRotation * Quaternion.Euler(0, 0, rotationAngle);
     }
 
@@ -31,6 +28,13 @@ public class FrameLever : Interactable
 
     void UpdateInteractText()
     {
+        // 순서 확인
+        if (!GameProgress.Instance.CanProgressLever())
+        {
+            interactText = "";
+            return;
+        }
+
         if (!isActivated)
             interactText = "돌리기 (E)";
         else
@@ -39,17 +43,22 @@ public class FrameLever : Interactable
 
     public override void Interact()
     {
-        if (isActivated) return;
+        // 순서 확인
+        if (!GameProgress.Instance.CanProgressLever())
+        {
+            Debug.Log("아직 이 퍼즐을 풀 수 없습니다.");
+            return;
+        }
 
-        isActivated = true;
+        if (isActivated) return;
         StartCoroutine(RotateFrame());
     }
 
     IEnumerator RotateFrame()
     {
+        isActivated = true;
         PlaySound();
 
-        // 액자 회전
         while (Quaternion.Angle(transform.rotation, targetRotation) > 0.1f)
         {
             transform.rotation = Quaternion.Lerp(transform.rotation, targetRotation, Time.deltaTime * rotationSpeed);
@@ -57,8 +66,28 @@ public class FrameLever : Interactable
         }
         transform.rotation = targetRotation;
 
-        // GameManager에 알림 → 서랍 자동 오픈
         GameManager.Instance.ActivateFrame();
+
+        // 포스트잇 활성화 (태그 사용)
+        ActivatePostits();
+
+        if (GameProgress.Instance != null)
+        {
+            GameProgress.Instance.CompleteLeverPuzzle();
+        }
+    }
+
+    void ActivatePostits()
+    {
+        // 비활성화된 오브젝트도 포함해서 찾기 (true 파라미터)
+        Note[] allNotes = FindObjectsOfType<Note>(true);
+        Debug.Log("찾은 포스트잇: " + allNotes.Length);
+
+        foreach (Note note in allNotes)
+        {
+            Debug.Log("활성화: " + note.gameObject.name);
+            note.gameObject.SetActive(true);
+        }
     }
 
     void PlaySound()

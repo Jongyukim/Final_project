@@ -47,11 +47,17 @@ public class LightSocket : Interactable
             if (item != null && item.itemName == "전구")
             {
                 inventoryManager.RemoveItem(0);
-
-                // 즉시 켜지 않고 GameManager에 등록만
+                lightComponent.gameObject.SetActive(true);
+                isActivated = true;
                 GameManager.Instance.RegisterLight(lightComponent);
 
-                isActivated = true;
+                // ← 추가
+                if (GameProgress.Instance != null)
+                {
+                    GameProgress.Instance.CompleteBulbPuzzle();
+                }
+
+                Debug.Log("전구를 장착했다!");
                 Destroy(this);
             }
         }

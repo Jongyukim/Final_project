@@ -1,16 +1,22 @@
 ﻿using UnityEngine;
+using UnityEngine.SceneManagement;
 
 public class GameManager : MonoBehaviour
 {
     public static GameManager Instance { get; private set; }
 
-    [SerializeField] private bool frameActivated = false;
+    [SerializeField] private float timeLimit = 300f;
+    private float currentTime;
+    private int puzzleStep = 0;
+
+    private bool frameActivated = false;
     private int lightCount = 0;
     private Light[] allLights = new Light[3];
-
-    // 🔥 추가: 액자 레버가 여는 서랍 (자동 오픈)
     private FrameActivatedDrawer autoDrawer;
 
+    public bool IsFrameActivated => frameActivated;
+    public int CurrentPuzzleStep => puzzleStep;
+    public float CurrentTime => currentTime;
 
     void Awake()
     {
@@ -25,23 +31,38 @@ public class GameManager : MonoBehaviour
         }
     }
 
-    public bool IsFrameActivated => frameActivated;
-    public int LightCount => lightCount;
-
-    // 🔥 추가: FrameActivatedDrawer에서 자기 자신 등록
-    public void RegisterAutoDrawer(FrameActivatedDrawer drawer)
+    void Start()
     {
-        autoDrawer = drawer;
+        currentTime = timeLimit;
     }
 
-    // 🔥 수정: 액자 활성화 시 자동으로 서랍 열기
-    public void ActivateFrame()
+    void Update()
     {
-        frameActivated = true;
+        HandleTimer();
+    }
 
-        if (autoDrawer != null)
+    void HandleTimer()
+    {
+        if (puzzleStep >= 7) return;
+        currentTime -= Time.deltaTime;
+        if (currentTime <= 0)
         {
-            autoDrawer.AutoOpen();
+            currentTime = 0;
+            // 더 이상 씬 로드 안 함 (GameProgress가 처리)
+        }
+    }
+
+    public bool IsCorrectStep(int requiredStep)
+    {
+        return puzzleStep == requiredStep;
+    }
+
+    public void CompleteStep()
+    {
+        puzzleStep++;
+        if (puzzleStep >= 7)
+        {
+            LoadGoodEnding(); // ← EndingScene만 로드
         }
     }
 
@@ -51,19 +72,46 @@ public class GameManager : MonoBehaviour
         {
             allLights[lightCount] = light;
             lightCount++;
-
             if (lightCount == 3)
             {
                 TurnOnAllLights();
+                CompleteStep();
             }
         }
     }
 
     void TurnOnAllLights()
     {
-        for (int i = 0; i < allLights.Length; i++)
+        foreach (Light l in allLights)
         {
-            allLights[i].gameObject.SetActive(true);
+            l.gameObject.SetActive(true);
         }
+    }
+
+    public void RegisterAutoDrawer(FrameActivatedDrawer drawer)
+    {
+        autoDrawer = drawer;
+    }
+
+    public void ActivateFrame()
+    {
+        if (puzzleStep != 1) return;
+        frameActivated = true;
+        if (autoDrawer != null)
+        {
+            autoDrawer.AutoOpen();
+        }
+        Note[] allNotes = FindObjectsOfType<Note>();
+        foreach (Note note in allNotes)
+        {
+            note.gameObject.SetActive(true);
+        }
+        CompleteStep();
+    }
+
+    // ← 유지: EndingScene만 로드
+    public void LoadGoodEnding()
+    {
+        SceneManager.LoadScene("EndingScene");
     }
 }
